@@ -5,12 +5,12 @@ compatibility_date = "2023-10-30"
 [vars]
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin"
-ENCRYPTION_KEY = "your-encryption-key"
+ENCRYPTION_KEY = "8f4d3a9b2c5e7d1f0a3b6c9e2d5f8a1b4c7e0d3f6a9b2c5e8d1f4a7b0c3e6d9"
 
 [[kv_namespaces]]
 binding = "KV"
-id = "your-kv-namespace-id"
+id = "500a88ff91a94917b22317115a680acd"
 
 [[r2_buckets]]
 binding = "R2"
-bucket_name = "your-r2-bucket"
+bucket_name = "cloudpass-passwords"
