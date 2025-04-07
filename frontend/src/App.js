@@ -10,7 +10,7 @@ const App = () => {
 
   useEffect(() => {
     // Fetch vaults from the backend (Cloudflare Workers API)
-    axios.get('https://your-worker.workers.dev/api/vaults')
+    axios.get('https://cloudpass-backend.xx1284080.workers.dev/api/vaults')
       .then(response => setVaults(response.data))
       .catch(error => console.error('Error fetching vaults:', error));
   }, []);
