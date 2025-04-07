@@ -1,94 +1,22 @@
-.app {
-  display: flex;
-  height: 100vh;
-}
-
-.sidebar {
-  width: 250px;
-  background-color: #1a73e8;
-  color: white;
+.form {
+  margin: 20px 0;
   padding: 20px;
-}
-
-.sidebar h2 {
-  font-size: 1.5em;
-  margin-bottom: 20px;
-}
-
-.section {
-  margin-bottom: 20px;
-}
-
-.section h3 {
-  font-size: 1.2em;
-  margin-bottom: 10px;
-}
-
-.section ul {
-  list-style: none;
-  padding: 0;
-}
-
-.section li {
-  padding: 5px 0;
-  cursor: pointer;
-}
-
-.section li:hover {
-  background-color: #1557b0;
-}
-
-.main {
-  flex: 1;
-  padding: 20px;
-}
-
-.filters {
-  margin-bottom: 20px;
-}
-
-.filters input,
-.filters select {
-  margin-right: 10px;
-  padding: 5px;
-}
-
-.vault-list {
-  background-color: #f9f9f9;
-  padding: 20px;
+  background-color: #fff;
+  border: 1px solid #ddd;
   border-radius: 5px;
 }
 
-.new-btn {
-  background-color: #1a73e8;
-  color: white;
-  border: none;
-  padding: 5px 10px;
-  cursor: pointer;
-  float: right;
+.form h4 {
+  margin-bottom: 10px;
 }
 
-table {
+.form input {
+  display: block;
   width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
+  margin-bottom: 10px;
+  padding: 5px;
 }
 
-th, td {
-  padding: 10px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
-}
-
-button {
-  margin-right: 5px;
-  padding: 5px 10px;
-  background-color: #1a73e8;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
-
-button:hover {
-  background-color: #1557b0;
+.form button {
+  margin-right: 10px;
 }
