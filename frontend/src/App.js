@@ -61,14 +61,14 @@ const App = () => {
   };
 
   const handleAddVault = () => {
-    axios.post('https://cloudpass-backend.your-username.workers.dev/api/vaults', newVault, {
+    axios.post('https://cloudpass-backend.xx1284080.workers.dev/api/vaults', newVault, {
       headers: {
         Authorization: `Basic ${btoa('admin:admin')}`
       }
     })
       .then(() => {
         // 重新获取 vaults
-        axios.get('https://cloudpass-backend.your-username.workers.dev/api/vaults', {
+        axios.get('https://cloudpass-backend.xx1284080.workers.dev/api/vaults', {
           headers: {
             Authorization: `Basic ${btoa('admin:admin')}`
           }
