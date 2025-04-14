@@ -1,0 +1,18 @@
+{
+  "name": "cloudpass-api",
+  "version": "1.0.0",
+  "description": "CloudPass Manager API",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler publish"
+  },
+  "dependencies": {
+    "itty-router": "^3.0.12",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

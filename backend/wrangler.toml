@@ -1,0 +1,15 @@
+name = "cloudpass-api"
+main = "src/index.js"
+compatibility_date = "2023-12-01"
+
+[[r2_buckets]]
+binding = "STORAGE"
+bucket_name = "cloudpass-storage"
+
+[vars]
+CORS_ORIGIN = "https://cloudpass-api.xx1284080.workers.dev"
+
+# 环境变量将在Cloudflare Dashboard中设置
+# ADMIN_USERNAME
+# ADMIN_PASSWORD_HASH
+# JWT_SECRET

@@ -1,0 +1,245 @@
+name: Deploy CloudPass Manager
+
+on:
+  workflow_dispatch:
+    inputs:
+      account_id:
+        description: 'Cloudflare Account ID'
+        required: true
+      api_token:
+        description: 'Cloudflare API Token'
+        required: true
+      admin_username:
+        description: 'Admin Username'
+        required: true
+        default: 'admin'
+      admin_password:
+        description: 'Admin Password'
+        required: true
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    outputs:
+      worker_url: ${{ steps.worker-url.outputs.WORKER_URL }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      # 添加创建目录结构的步骤
+      - name: Create directory structure
+        run: |
+          mkdir -p backend/src
+          mkdir -p frontend/src
+
+      - name: Install Wrangler
+        run: npm install -g wrangler
+
+      # 创建基本的后端文件
+      - name: Create backend files
+        run: |
+          echo '{
+            "name": "cloudpass-api",
+            "version": "1.0.0",
+            "description": "CloudPass Manager API",
+            "main": "src/index.js",
+            "dependencies": {
+              "bcryptjs": "^2.4.3",
+              "jsonwebtoken": "^9.0.0"
+            }
+          }' > backend/package.json
+
+          echo 'name = "cloudpass-api"
+          main = "src/index.js"
+          compatibility_date = "2023-01-01"
+
+          [[r2_buckets]]
+          binding = "STORAGE"
+          bucket_name = "cloudpass-storage"
+          ' > backend/wrangler.toml
+
+          echo 'addEventListener("fetch", (event) => {
+            event.respondWith(handleRequest(event.request));
+          });
+
+          async function handleRequest(request) {
+            return new Response("CloudPass API is running!", {
+              headers: { "content-type": "text/plain" },
+            });
+          }' > backend/src/index.js
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm install
+
+      - name: Generate password hash
+        id: hash-password
+        run: |
+          cd backend
+          echo "PASSWORD_HASH=$(node -e "const bcrypt = require('bcryptjs'); console.log(bcrypt.hashSync('${{ github.event.inputs.admin_password }}', 10))")" >> $GITHUB_OUTPUT
+
+      - name: Generate JWT secret
+        id: jwt-secret
+        run: |
+          echo "JWT_SECRET=$(openssl rand -base64 32)" >> $GITHUB_OUTPUT
+
+      - name: Deploy R2 bucket
+        run: |
+          cd backend
+          # 添加 || true 以忽略错误，因为存储桶可能已经存在
+          CLOUDFLARE_ACCOUNT_ID=${{ github.event.inputs.account_id }} wrangler r2 bucket create cloudpass-storage || echo "存储桶可能已存在，继续部署"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ github.event.inputs.api_token }}
+
+      - name: Deploy backend
+        run: |
+          cd backend
+          # 修改 deploy 命令，使用环境变量而不是命令行参数
+          CLOUDFLARE_ACCOUNT_ID=${{ github.event.inputs.account_id }} wrangler deploy --var ADMIN_USERNAME:${{ github.event.inputs.admin_username }} --var ADMIN_PASSWORD_HASH:${{ steps.hash-password.outputs.PASSWORD_HASH }} --var JWT_SECRET:${{ steps.jwt-secret.outputs.JWT_SECRET }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ github.event.inputs.api_token }}
+
+      - name: Get Worker URL
+        id: worker-url
+        run: |
+          cd backend
+          # 修改获取 Worker URL 的命令，使用环境变量而不是命令行参数
+          CLOUDFLARE_ACCOUNT_ID=${{ github.event.inputs.account_id }} WORKER_URL=$(wrangler whoami | grep -o 'cloudpass-api.[^"]*\.workers.dev' || echo "cloudpass-api.${{ github.event.inputs.account_id }}.workers.dev")
+          echo "WORKER_URL=https://$WORKER_URL" >> $GITHUB_OUTPUT
+          echo "worker_url=https://$WORKER_URL" >> $GITHUB_ENV
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ github.event.inputs.api_token }}
+
+  deploy-frontend:
+    needs: deploy-backend
+    runs-on: ubuntu-latest
+    env:
+      WORKER_URL: ${{ needs.deploy-backend.outputs.worker_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      # 创建基本的前端文件
+      - name: Create frontend files
+        run: |
+          mkdir -p frontend/public
+          mkdir -p frontend/src
+
+          echo '{
+            "name": "cloudpass-manager",
+            "version": "1.0.0",
+            "private": true,
+            "dependencies": {
+              "react": "^18.2.0",
+              "react-dom": "^18.2.0",
+              "react-scripts": "5.0.1",
+              "@mui/material": "^5.11.0",
+              "@mui/icons-material": "^5.11.0",
+              "@emotion/react": "^11.10.5",
+              "@emotion/styled": "^11.10.5",
+              "axios": "^1.2.1"
+            },
+            "scripts": {
+              "start": "react-scripts start",
+              "build": "react-scripts build",
+              "test": "react-scripts test",
+              "eject": "react-scripts eject"
+            },
+            "eslintConfig": {
+              "extends": [
+                "react-app"
+              ]
+            },
+            "browserslist": {
+              "production": [
+                ">0.2%",
+                "not dead",
+                "not op_mini all"
+              ],
+              "development": [
+                "last 1 chrome version",
+                "last 1 firefox version",
+                "last 1 safari version"
+              ]
+            }
+          }' > frontend/package.json
+
+          echo '<!DOCTYPE html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1" />
+              <title>CloudPass Manager</title>
+            </head>
+            <body>
+              <div id="root"></div>
+            </body>
+          </html>' > frontend/public/index.html
+
+          echo 'export const API_URL = "https://cloudpass-api.your-account.workers.dev";' > frontend/src/config.js
+
+          echo 'import React from "react";
+          import ReactDOM from "react-dom/client";
+          import App from "./App";
+
+          const root = ReactDOM.createRoot(document.getElementById("root"));
+          root.render(
+            <React.StrictMode>
+              <App />
+            </React.StrictMode>
+          );' > frontend/src/index.js
+
+          echo 'import React from "react";
+
+          function App() {
+            return (
+              <div>
+                <h1>CloudPass Manager</h1>
+                <p>Your secure password manager</p>
+              </div>
+            );
+          }
+
+          export default App;' > frontend/src/App.js
+
+      - name: Set API URL in config
+        run: |
+          sed -i "s|https://cloudpass-api.your-account.workers.dev|https://cloudpass-api.${{ github.event.inputs.account_id }}.workers.dev|g" frontend/src/config.js
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Deploy to Cloudflare Pages
+        id: deploy-pages
+        run: |
+          cd frontend
+          # 首先创建 Pages 项目，然后再部署
+          CLOUDFLARE_ACCOUNT_ID=${{ github.event.inputs.account_id }} npx wrangler pages project create cloudpass-manager --production-branch main || echo "项目可能已存在，继续部署"
+          CLOUDFLARE_ACCOUNT_ID=${{ github.event.inputs.account_id }} npx wrangler pages deploy build --project-name=cloudpass-manager | tee deploy_output.txt
+          # 从部署输出中提取实际的 URL
+          PAGES_URL=$(grep -o 'https://.*\.pages\.dev' deploy_output.txt | head -1)
+          echo "PAGES_URL=${PAGES_URL}" >> $GITHUB_OUTPUT
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ github.event.inputs.api_token }}
+
+      - name: Get Pages URL
+        run: |
+          echo "Frontend deployed to ${{ steps.deploy-pages.outputs.PAGES_URL }}"
